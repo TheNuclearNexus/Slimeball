@@ -3,9 +3,8 @@ import * as linq from 'linq-es5'
 import JSZip from 'jszip'
 
 export default class DefaultResourcepackBuilder extends util.PackBuilder {
-    constructor(packs: util.Pack[]) {
-        super('resourcepack', packs);
-        this.packs = packs;
+    constructor() {
+        super('resourcepack');
     }
 
     mergeLangs(fileData: util.FileData, resolvedData: string[]) {

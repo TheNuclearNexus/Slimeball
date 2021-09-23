@@ -1,22 +1,18 @@
 import JSZip, { file } from 'jszip'
 
-export async function getValidPacks(files: FileList) : Promise<[string, JSZip][]> {
-    let valid: [string, JSZip][] = []
+export async function validatePack(file: ArrayBuffer) : Promise<JSZip> {
 
-    for(let f = 0; f < files.length; f++) {
-        try {
-            console.log(files[f].size)        
-            const buffer = await files[f].arrayBuffer()
-            const zip = await JSZip.loadAsync(buffer)
+    try {
+        const zip = await JSZip.loadAsync(file)
 
-            if(zip.file("pack.mcmeta") !==null) {
-                valid.push([files[f].name, zip])
-            }
-        } catch {
-            alert(`There was an error loading ${files[f].name}, double check it is a valid zip archive`)
+        if(zip.file("pack.mcmeta") !==null) {
+            return zip;
         }
+    } catch {
+        alert(`There was an error loading a file, double check it is a valid zip archive`)
     }
-    return valid
+    
+    return null;
 }
 
 
@@ -201,15 +197,23 @@ export class PackBuilder {
         return pack
     }    
     
-    async loadFiles(files: FileList) {
-        const valid = await getValidPacks(files)
+    async loadFileList(files: FileList) {
         let packs: Pack[] = []
-    
-        valid.forEach(element => {
-            let d: Pack = this.createPack(element[0], element[1])
-            packs.push(d)
-        });
+        
+        for(let i = 0; i < files.length; i++) {
+            const zip = await validatePack(await files.item(i).arrayBuffer());
+            if(zip != null) {
+                packs.push(this.createPack(files.item(i).name, zip));
+            }
+        }
 
         this.packs = packs;
+    }
+
+    async loadFile(name: string, data: ArrayBuffer) {
+        const zip = await validatePack(data);
+        if(zip != null) {
+            this.packs.push(this.createPack(name, zip));
+        }
     }
 }

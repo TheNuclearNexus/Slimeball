@@ -18,7 +18,7 @@ import DefaultDatapackBuilder from 'slimeball/src/datapack'
 
 async function handleInput(files: FileList) {
     let ddb = new DefaultDatapackBuilder();
-    ddb.loadFiles(files).then(()=>{
+    ddb.loadFileList(files).then(()=>{
         ddb.build((blob) => {
             saveAs(blob, 'datapack.zip');
         });
