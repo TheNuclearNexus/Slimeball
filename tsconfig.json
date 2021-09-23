@@ -1,0 +1,9 @@
+{
+    "compilerOptions": {
+        "target": "ES3",
+        "watch": true,
+        "lib": ["dom", "es2021"],
+        "outDir": "out",
+        "esModuleInterop": true
+    }
+}
