@@ -1,1 +1,19 @@
-{"name":"slimeball","type":"module","version":"0.0.2","dependencies":{"@types/jszip":"^3.4.1","@types/node":"^16.9.6","jszip":"^3.7.1","linq-es5":"^1.11.15"}}
+{
+    "name": "slimeball",
+    "main": "out/index.js",
+    "types": "out/index.d.ts",
+    "version": "0.0.4-1",
+    "dependencies": {
+        "@types/jszip": "^3.4.1",
+        "@types/node": "^16.9.6",
+        "jszip": "^3.7.1",
+        "linq-es5": "^1.11.15"
+    },
+    "scripts": {
+        "build": "rmdir -Recurse -Force out | tsc -p ./tsconfig.json",
+        "pub": "tsc -p ./tsconfig.json | npm publish"
+    },
+    "files": [
+        "out"
+    ]
+}

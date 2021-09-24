@@ -14,13 +14,15 @@ Slimeball is a library for merging datapacks and resourcepacks on the fly.
 ## How to use the default builders
 
 ```ts
-import DefaultDatapackBuilder from 'slimeball/src/datapack'
+import DefaultDatapackBuilder from 'slimeball/out/datapack'
 
 async function handleInput(files: FileList) {
     let ddb = new DefaultDatapackBuilder();
     ddb.loadFileList(files).then(()=>{
-        ddb.build((blob) => {
-            saveAs(blob, 'datapack.zip');
+        ddb.build((result: BuildResult) => {
+            result.zip.generateAsync({type:"blob"}).then((blob) => {
+                saveAs(blob, 'datapack.zip');
+            })
         });
     })
 }

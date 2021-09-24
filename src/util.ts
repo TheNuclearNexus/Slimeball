@@ -96,6 +96,11 @@ export interface FileData {
     path: string,
 }
 
+export interface BuildResult {
+    conflicts: number,
+    zip: JSZip
+}
+
 export class PackBuilder {
     protected finalZip: JSZip = new JSZip();
     protected fileMap: FileMap = {}
@@ -112,7 +117,10 @@ export class PackBuilder {
         for(let idx = 0; idx < this.packs.length; idx++) {
             let d = this.packs[idx];
             for(let namespace in d.namespaces) {
+                if(this.fileMap[namespace] == null) this.fileMap[namespace] = {};
+
                 for(let category in d.namespaces[namespace].data) {
+                    if(this.fileMap[namespace][category] == null) this.fileMap[namespace][category] = {};
 
                     for(let filePath of d.namespaces[namespace].data[category]) {
 
@@ -127,8 +135,8 @@ export class PackBuilder {
         }
     }
 
-    async build(save: (blob)=>void) {
-        if(this.packs.length == 0) throw Error("No packs available to merge!")
+    async build(save: (result: BuildResult)=>void) {
+        if(this.packs == null || this.packs.length == 0) throw Error("No packs available to merge!")
 
         this.createFileMap();
 
@@ -154,8 +162,19 @@ export class PackBuilder {
             }
         }
         if(numberOfConflicts > 0) {
+            for(let namespace in this.fileMap) {
+                for(let category in this.fileMap[namespace]) {
+                    for(let filePath in this.fileMap[namespace][category]) {
+                        if(this.fileMap[namespace][category][filePath] != null && this.fileMap[namespace][category][filePath].length > 1) {
+                            content += filePath + ':\n'
+                            for(let p of this.fileMap[namespace][category][filePath]) {
+                                content += ' - ' + this.packs[p].name + '\n';
+                            }
+                        }
+                    }
+                }
+            }
             this.finalZip.file("conflicts.yaml", content)
-            alert(`Found ${numberOfConflicts} conflict(s), check 'conflicts.yaml' for a complete list`)
         }
 
         this.finalZip.file("pack.mcmeta", JSON.stringify({
@@ -165,9 +184,7 @@ export class PackBuilder {
             }
         }))
 
-        let blob = await this.finalZip.generateAsync({type:'blob'})
-
-        save(blob)
+        save({zip: this.finalZip, conflicts: numberOfConflicts})
     }
 
     private createPack(name:string, file: JSZip) : Pack {
@@ -210,10 +227,16 @@ export class PackBuilder {
         this.packs = packs;
     }
 
-    async loadFile(name: string, data: ArrayBuffer) {
-        const zip = await validatePack(data);
-        if(zip != null) {
-            this.packs.push(this.createPack(name, zip));
+    async loadBuffers(buffers: [string, ArrayBuffer][]) {
+        let packs: Pack[] = []
+        
+        for(let i = 0; i < buffers.length; i++) {
+            const zip = await validatePack(buffers[i][1]);
+            if(zip != null) {
+                packs.push(this.createPack(buffers[i][0], zip));
+            }
         }
+
+        this.packs = packs;
     }
 }

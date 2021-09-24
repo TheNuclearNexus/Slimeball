@@ -36,9 +36,20 @@ export default class DefaultDatapackBuilder extends util.PackBuilder {
             resolvedData.push(data)
         }
 
-        if(fileData.category === 'tags') {
-            this.mergeTags(fileData, resolvedData);
+        let first = resolvedData[0];
+        for(let d = 1; d < resolvedData.length; d++) {
+            if(resolvedData[d] != first) {
+                if(fileData.category === 'tags') {
+                    this.mergeTags(fileData, resolvedData);
+                } else {
+                    this.finalZip.file(fileData.path, first);
+                }
+
+                return;
+            }
         }
+        this.finalZip.file(fileData.path, first);
+        this.fileMap[fileData.namespace][fileData.category][fileData.path] = null;
     }
 }
 
