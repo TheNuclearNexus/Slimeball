@@ -227,6 +227,19 @@ export class PackBuilder {
         this.packs = packs;
     }
 
+    async loadFileArray(files: File[]) {
+        let packs: Pack[] = []
+        
+        for(let i = 0; i < files.length; i++) {
+            const zip = await validatePack(await files[i].arrayBuffer());
+            if(zip != null) {
+                packs.push(this.createPack(files[i].name, zip));
+            }
+        }
+
+        this.packs = packs;
+    }
+
     async loadBuffers(buffers: [string, ArrayBuffer][]) {
         let packs: Pack[] = []
         
