@@ -7,14 +7,14 @@ export default class DefaultDatapackBuilder extends util.PackBuilder {
         super('datapack');
     }
 
-    mergeTags(fileData: util.FileData, resolvedData: ArrayBuffer[]) {
+    mergeTags(fileData: util.FileData, resolvedData: string[]) {
         let finalJson = {
             replace: false,
             values: []
         }
 
         for(let data of resolvedData) {
-            let json = JSON.parse(util.arrayBufferToString(data));
+            let json = JSON.parse(data);
 
             if(json["values"] == null) continue;
 
@@ -30,10 +30,10 @@ export default class DefaultDatapackBuilder extends util.PackBuilder {
     }
 
     override async handleConflict(fileData: util.FileData, occurences: number[]) {
-        let resolvedData: ArrayBuffer[] = []
+        let resolvedData: string[] = []
         for(let packIdx of occurences) {
             let packZip = this.packs[packIdx].zip;
-            let data = await packZip.file(fileData.path).async("arraybuffer");
+            let data = await packZip.file(fileData.path).async("string");
             resolvedData.push(data)
         }
 
@@ -49,7 +49,7 @@ export default class DefaultDatapackBuilder extends util.PackBuilder {
                 return;
             }
         }
-        this.finalZip.file(fileData.path, first);
+        this.finalZip.file(fileData.path, await this.packs[occurences[0]].zip.file(fileData.path).async("arraybuffer"));
         this.fileMap[fileData.namespace][fileData.category][fileData.path] = null;
     }
 }

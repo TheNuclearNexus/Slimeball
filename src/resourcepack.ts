@@ -7,11 +7,11 @@ export default class DefaultResourcepackBuilder extends util.PackBuilder {
         super('resourcepack');
     }
 
-    mergeLangs(fileData: util.FileData, resolvedData: ArrayBuffer[]) {
+    mergeLangs(fileData: util.FileData, resolvedData: string[]) {
         let finalLang = {}
 
         for(let data of resolvedData) {
-            let json = JSON.parse(util.arrayBufferToString(data));
+            let json = JSON.parse(data);
 
             for(let k in json) {
                 finalLang[k] = json[k];
@@ -22,17 +22,17 @@ export default class DefaultResourcepackBuilder extends util.PackBuilder {
         this.fileMap[fileData.namespace][fileData.category][fileData.path] = null;
     }
 
-    mergeModels(fileData: util.FileData, resolvedData: ArrayBuffer[]) {
+    mergeModels(fileData: util.FileData, resolvedData: string[]) {
         let finalModel = null;
 
         for(let data of resolvedData) {
-            let json = JSON.parse(util.arrayBufferToString(data));
+            let json = JSON.parse(data);
             if(finalModel == null) {
                 finalModel = json;
                 if(finalModel["overrides"] == null) finalModel["overrides"] = [];
             }
 
-            if(json["overrides"] == null)
+            if(json["overrides"] != null)
                 finalModel["overrides"] = finalModel["overrides"].concat(json["overrides"])
         }
 
@@ -62,10 +62,10 @@ export default class DefaultResourcepackBuilder extends util.PackBuilder {
     }
 
     override async handleConflict(fileData: util.FileData, occurences: number[]) {
-        let resolvedData: ArrayBuffer[] = []
+        let resolvedData: string[] = []
         for(let packIdx of occurences) {
             let packZip = this.packs[packIdx].zip;
-            let data = await packZip.file(fileData.path).async("arraybuffer");
+            let data = await packZip.file(fileData.path).async("string");
             resolvedData.push(data)
         }
 
@@ -73,6 +73,8 @@ export default class DefaultResourcepackBuilder extends util.PackBuilder {
             this.mergeLangs(fileData, resolvedData);
         } else if (fileData.category === 'models') {
             this.mergeModels(fileData, resolvedData)
+        } else {
+            this.finalZip.file(fileData.path, await this.packs[occurences[0]].zip.file(fileData.path).async("arraybuffer"));
         }
     }
 }
