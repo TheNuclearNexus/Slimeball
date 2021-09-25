@@ -7,11 +7,11 @@ export default class DefaultResourcepackBuilder extends util.PackBuilder {
         super('resourcepack');
     }
 
-    mergeLangs(fileData: util.FileData, resolvedData: string[]) {
+    mergeLangs(fileData: util.FileData, resolvedData: ArrayBuffer[]) {
         let finalLang = {}
 
         for(let data of resolvedData) {
-            let json = JSON.parse(data);
+            let json = JSON.parse(util.arrayBufferToString(data));
 
             for(let k in json) {
                 finalLang[k] = json[k];
@@ -22,11 +22,11 @@ export default class DefaultResourcepackBuilder extends util.PackBuilder {
         this.fileMap[fileData.namespace][fileData.category][fileData.path] = null;
     }
 
-    mergeModels(fileData: util.FileData, resolvedData: string[]) {
+    mergeModels(fileData: util.FileData, resolvedData: ArrayBuffer[]) {
         let finalModel = null;
 
         for(let data of resolvedData) {
-            let json = JSON.parse(data);
+            let json = JSON.parse(util.arrayBufferToString(data));
             if(finalModel == null) {
                 finalModel = json;
                 if(finalModel["overrides"] == null) finalModel["overrides"] = [];
@@ -62,10 +62,10 @@ export default class DefaultResourcepackBuilder extends util.PackBuilder {
     }
 
     override async handleConflict(fileData: util.FileData, occurences: number[]) {
-        let resolvedData: string[] = []
+        let resolvedData: ArrayBuffer[] = []
         for(let packIdx of occurences) {
             let packZip = this.packs[packIdx].zip;
-            let data = await packZip.file(fileData.path).async("string");
+            let data = await packZip.file(fileData.path).async("arraybuffer");
             resolvedData.push(data)
         }
 

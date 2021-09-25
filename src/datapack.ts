@@ -1,19 +1,20 @@
 import JSZip from 'jszip'
 import * as util from './util'
 
+
 export default class DefaultDatapackBuilder extends util.PackBuilder {
     constructor() {
         super('datapack');
     }
 
-    mergeTags(fileData: util.FileData, resolvedData: string[]) {
+    mergeTags(fileData: util.FileData, resolvedData: ArrayBuffer[]) {
         let finalJson = {
             replace: false,
             values: []
         }
 
         for(let data of resolvedData) {
-            let json = JSON.parse(data);
+            let json = JSON.parse(util.arrayBufferToString(data));
 
             if(json["values"] == null) continue;
 
@@ -29,10 +30,10 @@ export default class DefaultDatapackBuilder extends util.PackBuilder {
     }
 
     override async handleConflict(fileData: util.FileData, occurences: number[]) {
-        let resolvedData: string[] = []
+        let resolvedData: ArrayBuffer[] = []
         for(let packIdx of occurences) {
             let packZip = this.packs[packIdx].zip;
-            let data = await packZip.file(fileData.path).async("string");
+            let data = await packZip.file(fileData.path).async("arraybuffer");
             resolvedData.push(data)
         }
 

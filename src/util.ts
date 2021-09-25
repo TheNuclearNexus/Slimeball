@@ -67,6 +67,11 @@ export class Pack {
     }
 }
 
+export function arrayBufferToString(buffer: ArrayBuffer) {
+    return String.fromCharCode.apply(null, new Uint8Array(buffer));
+}
+
+
 export function getParts(path: string) {
     return path.split('/')
 }
@@ -195,7 +200,7 @@ export class PackBuilder {
 
         readDir(file, rootPath, (path, entry) => {
             let parts = getParts(path)
-            if(parts.length > 2) {
+            if(parts.length >= 2) {
                 let n = parts[0]
                 let f = parts[1]
     
