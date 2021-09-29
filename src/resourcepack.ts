@@ -11,7 +11,8 @@ export default class DefaultResourcepackBuilder extends util.PackBuilder {
         let finalLang = {}
 
         for(let data of resolvedData) {
-            let json = JSON.parse(data);
+            let json = util.parseData(data);
+            if(json == null) continue;
 
             for(let k in json) {
                 finalLang[k] = json[k];
@@ -26,7 +27,9 @@ export default class DefaultResourcepackBuilder extends util.PackBuilder {
         let finalModel = null;
 
         for(let data of resolvedData) {
-            let json = JSON.parse(data);
+            let json = util.parseData(data);
+            if(json == null) continue;
+            
             if(finalModel == null) {
                 finalModel = json;
                 if(finalModel["overrides"] == null) finalModel["overrides"] = [];

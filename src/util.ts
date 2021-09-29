@@ -1,4 +1,5 @@
 import JSZip, { file } from 'jszip'
+import { EventEmitter } from 'events';
 
 export async function validatePack(file: ArrayBuffer) : Promise<JSZip> {
 
@@ -95,6 +96,14 @@ export interface FileMap {
     }
 }
 
+export function parseData(data: string): any {
+    try {
+        return JSON.parse(data);
+    } catch (e) {
+        PackBuilderEvents.emit('caught-error', e);
+    }
+}
+
 export interface FileData {
     namespace: string,
     category: string,
@@ -105,6 +114,8 @@ export interface BuildResult {
     conflicts: number,
     zip: JSZip
 }
+
+export const PackBuilderEvents = new EventEmitter();
 
 export class PackBuilder {
     protected finalZip: JSZip = new JSZip();
