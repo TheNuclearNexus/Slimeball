@@ -1,7 +1,7 @@
 import JSZip, { file } from 'jszip'
 import { EventEmitter } from 'events';
 
-export async function validatePack(file: ArrayBuffer) : Promise<JSZip> {
+export async function validatePack(file: ArrayBuffer) : Promise<JSZip|null> {
 
     try {
         const zip = await JSZip.loadAsync(file)
@@ -68,10 +68,6 @@ export class Pack {
     }
 }
 
-export function arrayBufferToString(buffer: ArrayBuffer) {
-    return String.fromCharCode.apply(null, new Uint8Array(buffer));
-}
-
 
 export function getParts(path: string) {
     return path.split('/')
@@ -99,7 +95,7 @@ export interface FileMap {
 export function parseData(data: string): any {
     try {
         return JSON.parse(data);
-    } catch (e) {
+    } catch (e: any) {
         PackBuilderEvents.emit('caught-error', e);
     }
 }
@@ -121,7 +117,7 @@ export class PackBuilder {
     protected finalZip: JSZip = new JSZip();
     protected fileMap: FileMap = {}
     protected type: 'resourcepack'|'datapack'
-    protected packs: Pack[];
+    protected packs: Pack[] = [];
 
     constructor(type: 'resourcepack'|'datapack') {
         this.type = type;
@@ -151,7 +147,7 @@ export class PackBuilder {
         }
     }
 
-    async build(save: (result: BuildResult)=>void) {
+    async build(): Promise<BuildResult> {
         if(this.packs == null || this.packs.length == 0) throw Error("No packs available to merge!")
 
         this.createFileMap();
@@ -166,11 +162,15 @@ export class PackBuilder {
 
                     if(fileOccurences.length == 1) {
                         let packZip = this.packs[fileOccurences[0]].zip;
-                        this.finalZip.file(filePath, packZip.file(filePath).async('arraybuffer'))
-                        this.fileMap[namespace][category][filePath] = null;
+                        if(packZip != null) {
+                            const file = packZip.file(filePath)
+                            if(file != null)
+                                this.finalZip.file(filePath, file.async('arraybuffer'))
+                            this.fileMap[namespace][category][filePath] = [];
+                        }
                     } else {
                         await this.handleConflict({namespace: namespace, category: category, path: filePath}, fileOccurences)
-                        if(this.fileMap[namespace][category][filePath] != null) {
+                        if(this.fileMap[namespace][category][filePath] != null && this.fileMap[namespace][category][filePath].length > 0) {
                             numberOfConflicts++;
                         }
                     }
@@ -200,7 +200,7 @@ export class PackBuilder {
             }
         }))
 
-        save({zip: this.finalZip, conflicts: numberOfConflicts})
+        return {zip: this.finalZip, conflicts: numberOfConflicts}
     }
 
     private createPack(name:string, file: JSZip) : Pack {
@@ -234,9 +234,13 @@ export class PackBuilder {
         let packs: Pack[] = []
         
         for(let i = 0; i < files.length; i++) {
-            const zip = await validatePack(await files.item(i).arrayBuffer());
-            if(zip != null) {
-                packs.push(this.createPack(files.item(i).name, zip));
+            const f = files.item(1)
+            if(f != null) {
+                
+                const zip = await validatePack(await f.arrayBuffer());
+                if(zip != null) {
+                    packs.push(this.createPack(f.name, zip));
+                }
             }
         }
 

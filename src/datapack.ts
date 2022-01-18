@@ -8,7 +8,7 @@ export default class DefaultDatapackBuilder extends util.PackBuilder {
     }
 
     mergeTags(fileData: util.FileData, resolvedData: string[]) {
-        let finalJson = {
+        let finalJson: {replace: boolean, values: any[]} = {
             replace: false,
             values: []
         }
@@ -27,7 +27,7 @@ export default class DefaultDatapackBuilder extends util.PackBuilder {
         }
 
         this.finalZip.file(fileData.path, JSON.stringify(finalJson, null, 2));
-        this.fileMap[fileData.namespace][fileData.category][fileData.path] = null;
+        this.fileMap[fileData.namespace][fileData.category][fileData.path] = [];
     }
 
     async getResolvedData(fileData: util.FileData, occurences: number[]) {
@@ -35,8 +35,11 @@ export default class DefaultDatapackBuilder extends util.PackBuilder {
 
         for(let packIdx of occurences) {
             let packZip = this.packs[packIdx].zip;
-            let data = await packZip.file(fileData.path).async("string");
-            resolvedData.push(data)
+            const file = await packZip.file(fileData.path);
+            if(file != null) { 
+                let data = await file.async("string");
+                resolvedData.push(data)
+            }
         }
 
         return resolvedData;
@@ -58,7 +61,7 @@ export default class DefaultDatapackBuilder extends util.PackBuilder {
     } 
 
     override async handleConflict(fileData: util.FileData, occurences: number[]) {
-        function onSuccess(resolvedData: string[]) {
+        const onSuccess = (resolvedData: string[]) => {
             if(fileData.category === 'tags') {
                 this.mergeTags(fileData, resolvedData);
             } else {
@@ -66,9 +69,9 @@ export default class DefaultDatapackBuilder extends util.PackBuilder {
             }
         }
 
-        function onFailure(resolvedData: string[]) {
+        const onFailure = (resolvedData: string[]) => {
             this.finalZip.file(fileData.path, resolvedData[0]);
-            this.fileMap[fileData.namespace][fileData.category][fileData.path] = null;
+            this.fileMap[fileData.namespace][fileData.category][fileData.path] = [];
         }
         await this.ifAnyDifferent(fileData, occurences, onSuccess, onFailure)
     }

@@ -1,16 +1,12 @@
 {
     "compilerOptions": {
-        "target": "ES2021",
-        "watch": false,
-        "lib": ["dom", "es2021"],
-        "outDir": "./out",
-        "esModuleInterop": true,
+        "target": "es2021",
+        "module": "commonjs",
         "declaration": true,
-        "module": "CommonJS",
-        "moduleResolution": "node"
+        "outDir": "./out",
+        "strict": true,
+        "esModuleInterop": true
     },
-    "exclude": [
-        "node_modules",
-        "out"
-    ]
+    "include": ["src"],
+    "exclude": ["node_modules", "**/__tests__/*"]
 }
