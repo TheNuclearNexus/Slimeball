@@ -52,7 +52,7 @@ export default class DefaultDatapackBuilder extends util.PackBuilder {
         let first = resolvedData[0];
         for(let d = 1; d < resolvedData.length; d++) {
             if(resolvedData[d] != first) {
-                success(resolvedData);
+                await success(resolvedData);
                 return;
             }
         }

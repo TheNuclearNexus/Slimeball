@@ -2,7 +2,7 @@
     "name": "slimeball",
     "main": "out/index.js",
     "types": "out/index.d.ts",
-    "version": "0.0.8",
+    "version": "0.0.8-1",
     "dependencies": {
         "@types/jszip": "^3.4.1",
         "@types/node": "^16.9.6",
