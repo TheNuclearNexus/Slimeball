@@ -207,7 +207,7 @@ export class PackBuilder {
             }
         }))
 
-        if(this.packs.length === 0) {
+        if(this.packs.length === 1) {
             const png = this.packs[0].zip.file("pack.png")
             if(png) {
                 this.finalZip.file("pack.png", await png.async("blob"))
