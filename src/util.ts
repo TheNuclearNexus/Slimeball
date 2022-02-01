@@ -123,7 +123,11 @@ export class PackBuilder {
         this.type = type;
     }
     
-    async handleConflict(fileData: FileData, occurences: number[]) {throw Error("Not Implemented, please extend this class")};
+    async handleConflict(fileData: FileData, occurences: number[]) {
+        const e = Error("Not Implemented, please extend this class")
+        PackBuilderEvents.emit('caught-error', e)
+        throw e
+    };
 
     private createFileMap() {
         for(let idx = 0; idx < this.packs.length; idx++) {
@@ -148,8 +152,11 @@ export class PackBuilder {
     }
 
     async build(): Promise<BuildResult> {
-        if(this.packs == null || this.packs.length == 0) throw Error("No packs available to merge!")
-
+        if(this.packs == null || this.packs.length == 0) {
+            const e = Error("No packs available to merge! Ensure that they are in the correct format!")
+            PackBuilderEvents.emit('caught-error', e)
+            throw e
+        }
         this.createFileMap();
 
         let content : string = ''
