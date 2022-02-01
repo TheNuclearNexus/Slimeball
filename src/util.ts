@@ -202,10 +202,17 @@ export class PackBuilder {
 
         this.finalZip.file("pack.mcmeta", JSON.stringify({
             pack: {
-                pack_format:7,
+                pack_format:8,
                 description: `${this.type[0] + this.type.substring(1)} merged with §bmito.thenuclearnexus.live`
             }
         }))
+
+        if(this.packs.length === 0) {
+            const png = this.packs[0].zip.file("pack.png")
+            if(png) {
+                this.finalZip.file("pack.png", await png.async("blob"))
+            }
+        }
 
         return {zip: this.finalZip, conflicts: numberOfConflicts}
     }
