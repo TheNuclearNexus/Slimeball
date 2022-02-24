@@ -1,17 +1,22 @@
 {
     "name": "slimeball",
-    "main": "out/index.js",
-    "types": "out/index.d.ts",
-    "version": "0.0.8-4",
+    "main": "out/src/index.js",
+    "types": "out/src/index.d.ts",
+    "version": "0.0.9-2",
+    "type": "module",
     "dependencies": {
         "@types/jszip": "^3.4.1",
         "@types/node": "^16.9.6",
+        "@zip.js/zip.js": "^2.4.4",
+        "blob-polyfill": "^6.0.20211015",
         "jszip": "^3.7.1",
-        "linq-es5": "^1.11.15"
+        "linq-es5": "^1.11.15",
+        "web-worker": "^1.2.0"
     },
     "scripts": {
         "build": "rmdir -Recurse -Force out | tsc -p ./tsconfig.json",
-        "pub": "tsc -p ./tsconfig.json | npm publish"
+        "pub": "tsc -p ./tsconfig.json | npm publish",
+        "test": "tsc -b tsconfig.testing.json | node out/test/index.js"
     },
     "files": [
         "out"

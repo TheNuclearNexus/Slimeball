@@ -1,13 +1,13 @@
-import * as util from './util'
+import * as util from './util.js'
 import * as linq from 'linq-es5'
-import JSZip from 'jszip'
+import { BlobReader, TextReader } from '@zip.js/zip.js';
 
 export default class DefaultResourcepackBuilder extends util.PackBuilder {
     constructor() {
         super('resourcepack');
     }
 
-    mergeLangs(fileData: util.FileData, resolvedData: string[]) {
+    async mergeLangs(fileData: util.FileData, resolvedData: string[]) {
         let finalLang: {[key: string]: any} = {}
 
         for(let data of resolvedData) {
@@ -18,12 +18,11 @@ export default class DefaultResourcepackBuilder extends util.PackBuilder {
                 finalLang[k] = json[k];
             }
         }
-
-        this.finalZip.file(fileData.path, JSON.stringify(finalLang, null, 2));
+        await this.finalZip.add(fileData.path, new TextReader(JSON.stringify(finalLang, null, 2)));
         this.fileMap[fileData.namespace][fileData.category][fileData.path] = [];
     }
 
-    mergeModels(fileData: util.FileData, resolvedData: string[]) {
+    async mergeModels(fileData: util.FileData, resolvedData: string[]) {
         let finalModel = null;
 
         for(let data of resolvedData) {
@@ -62,7 +61,7 @@ export default class DefaultResourcepackBuilder extends util.PackBuilder {
 
                 finalModel["overrides"] = o.ToArray();
             }
-            this.finalZip.file(fileData.path, JSON.stringify(finalModel, null, 2));
+            await this.finalZip.add(fileData.path, new TextReader(JSON.stringify(finalModel, null, 2)));
         }
         
         this.fileMap[fileData.namespace][fileData.category][fileData.path] = [];
@@ -82,13 +81,13 @@ export default class DefaultResourcepackBuilder extends util.PackBuilder {
         }
 
         if(fileData.category === 'lang') {
-            this.mergeLangs(fileData, resolvedData);
+            await this.mergeLangs(fileData, resolvedData);
         } else if (fileData.category === 'models') {
-            this.mergeModels(fileData, resolvedData)
+            await this.mergeModels(fileData, resolvedData)
         } else {
             const f = this.packs[occurences[0]].zip.file(fileData.path)
             if(f != null)
-                this.finalZip.file(fileData.path, await f.async("arraybuffer"));
+            await this.finalZip.add(fileData.path, new BlobReader(await f.async("blob")));
         }
     }
 }

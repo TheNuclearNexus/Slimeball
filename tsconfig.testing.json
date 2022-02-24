@@ -3,7 +3,6 @@
         "target": "es2021",
         "module": "es2020",
         "declaration": true,
-        "rootDir": "src",
         "outDir": "./out",
         "strict": true,
         "esModuleInterop": true,
@@ -12,6 +11,6 @@
             "es2021", "DOM"
         ],
     },
-    "include": ["src"],
+    "include": ["src", "test"],
     "exclude": ["node_modules", "**/__tests__/*"]
 }

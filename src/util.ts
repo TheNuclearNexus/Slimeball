@@ -1,5 +1,9 @@
-import JSZip, { file } from 'jszip'
+/* global globalThis */
+
+import JSZip from 'jszip'
 import { EventEmitter } from 'events';
+
+import { BlobReader, BlobWriter, TextReader, ZipWriter } from '@zip.js/zip.js'
 
 export async function validatePack(file: ArrayBuffer) : Promise<JSZip|null> {
 
@@ -108,19 +112,23 @@ export interface FileData {
 
 export interface BuildResult {
     conflicts: number,
-    zip: JSZip
+    zip: ZipWriter
 }
 
 export const PackBuilderEvents = new EventEmitter();
 
 export class PackBuilder {
-    protected finalZip: JSZip = new JSZip();
+    protected finalZip: ZipWriter
     protected fileMap: FileMap = {}
     protected type: 'resourcepack'|'datapack'
     protected packs: Pack[] = [];
-
+    protected onUpdate: (message: string) => void = (m) => console.log(m)
     constructor(type: 'resourcepack'|'datapack') {
         this.type = type;
+
+        const blobWriter = new BlobWriter("application/zip");
+        this.finalZip = new ZipWriter(blobWriter)
+        
     }
     
     async handleConflict(fileData: FileData, occurences: number[]) {
@@ -130,6 +138,7 @@ export class PackBuilder {
     };
 
     private createFileMap() {
+        this.onUpdate('Creating file map!')
         for(let idx = 0; idx < this.packs.length; idx++) {
             let d = this.packs[idx];
             for(let namespace in d.namespaces) {
@@ -151,12 +160,13 @@ export class PackBuilder {
         }
     }
 
-    async build(): Promise<BuildResult> {
+    async build(onUpdate?: (message: string)=>void): Promise<BuildResult> {
         if(this.packs == null || this.packs.length == 0) {
             const e = Error("No packs available to merge! Ensure that they are in the correct format!")
             PackBuilderEvents.emit('caught-error', e)
             throw e
         }
+        this.onUpdate = onUpdate ? onUpdate : (message: string) => console.log(message);
         this.createFileMap();
 
         let content : string = ''
@@ -165,6 +175,7 @@ export class PackBuilder {
         for(let namespace in this.fileMap) {
             for(let category in this.fileMap[namespace]) {
                 for(let filePath in this.fileMap[namespace][category]) {
+                    this.onUpdate(`Checking for conflicts\n${filePath}`)
                     let fileOccurences = this.fileMap[namespace][category][filePath];
 
                     if(fileOccurences.length == 1) {
@@ -172,10 +183,11 @@ export class PackBuilder {
                         if(packZip != null) {
                             const file = packZip.file(filePath)
                             if(file != null)
-                                this.finalZip.file(filePath, file.async('arraybuffer'))
+                                await this.finalZip.add(filePath, new BlobReader(await file.async('blob')))
                             this.fileMap[namespace][category][filePath] = [];
                         }
                     } else {
+                        this.onUpdate(`Handling conflict\n${filePath}`)
                         await this.handleConflict({namespace: namespace, category: category, path: filePath}, fileOccurences)
                         if(this.fileMap[namespace][category][filePath] != null && this.fileMap[namespace][category][filePath].length > 0) {
                             numberOfConflicts++;
@@ -185,6 +197,7 @@ export class PackBuilder {
             }
         }
         if(numberOfConflicts > 0) {
+            this.onUpdate(`Writing conflicts.yaml`)
             for(let namespace in this.fileMap) {
                 for(let category in this.fileMap[namespace]) {
                     for(let filePath in this.fileMap[namespace][category]) {
@@ -197,20 +210,22 @@ export class PackBuilder {
                     }
                 }
             }
-            this.finalZip.file("conflicts.yaml", content)
+            await this.finalZip.add("conflicts.yaml", new TextReader(content))
         }
 
-        this.finalZip.file("pack.mcmeta", JSON.stringify({
+        this.onUpdate(`Adding pack.mcmeta`)
+        await this.finalZip.add("pack.mcmeta", new TextReader(JSON.stringify({
             pack: {
                 pack_format:8,
                 description: `${this.type[0] + this.type.substring(1)} merged with §bmito.thenuclearnexus.live`
             }
-        }))
+        })))
 
         if(this.packs.length === 1) {
+            this.onUpdate(`Adding pack.png`)
             const png = this.packs[0].zip.file("pack.png")
             if(png) {
-                this.finalZip.file("pack.png", await png.async("blob"))
+                await this.finalZip.add("pack.png", new BlobReader(await png.async("blob")))
             }
         }
 

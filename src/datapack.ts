@@ -1,5 +1,5 @@
-import JSZip from 'jszip'
-import * as util from './util'
+import { TextReader } from '@zip.js/zip.js';
+import * as util from './util.js'
 
 
 export default class DefaultDatapackBuilder extends util.PackBuilder {
@@ -7,7 +7,7 @@ export default class DefaultDatapackBuilder extends util.PackBuilder {
         super('datapack');
     }
 
-    mergeTags(fileData: util.FileData, resolvedData: string[]) {
+    async mergeTags(fileData: util.FileData, resolvedData: string[]) {
         let finalJson: {replace: boolean, values: any[]} = {
             replace: false,
             values: []
@@ -26,7 +26,7 @@ export default class DefaultDatapackBuilder extends util.PackBuilder {
             }
         }
 
-        this.finalZip.file(fileData.path, JSON.stringify(finalJson, null, 2));
+        await this.finalZip.add(fileData.path, new TextReader(JSON.stringify(finalJson, null, 2)));
         this.fileMap[fileData.namespace][fileData.category][fileData.path] = [];
     }
 
@@ -61,16 +61,16 @@ export default class DefaultDatapackBuilder extends util.PackBuilder {
     } 
 
     override async handleConflict(fileData: util.FileData, occurences: number[]) {
-        const onSuccess = (resolvedData: string[]) => {
+        const onSuccess = async (resolvedData: string[]) => {
             if(fileData.category === 'tags') {
-                this.mergeTags(fileData, resolvedData);
+                await this.mergeTags(fileData, resolvedData);
             } else {
-                this.finalZip.file(fileData.path, resolvedData[0]);
+                await this.finalZip.add(fileData.path, new TextReader(resolvedData[0]));
             }
         }
 
-        const onFailure = (resolvedData: string[]) => {
-            this.finalZip.file(fileData.path, resolvedData[0]);
+        const onFailure = async (resolvedData: string[]) => {
+            await this.finalZip.add(fileData.path, new TextReader(resolvedData[0]));
             this.fileMap[fileData.namespace][fileData.category][fileData.path] = [];
         }
         await this.ifAnyDifferent(fileData, occurences, onSuccess, onFailure)
