@@ -165,8 +165,8 @@ export class PackBuilder {
         this.createFileMap();
 
         let conflicts: { path: string, packs: number[] }[] = []
+        this.onUpdate(`Checking for conflicts!`)
         for (let filePath in this.fileMap) {
-            this.onUpdate(`Checking for conflicts\n${filePath}`)
             let fileOccurences = this.fileMap[filePath]
 
             if (fileOccurences.length == 1) {
@@ -188,6 +188,7 @@ export class PackBuilder {
                         packs: fileOccurences
                     })
                 }
+                this.onUpdate(`Checking for conflicts!`)
             }
 
         }
