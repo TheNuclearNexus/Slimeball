@@ -2,7 +2,7 @@
     "name": "slimeball",
     "main": "out/src/index.js",
     "types": "out/src/index.d.ts",
-    "version": "0.0.9-2",
+    "version": "0.1.0",
     "type": "module",
     "dependencies": {
         "@types/jszip": "^3.4.1",
@@ -16,7 +16,7 @@
     "scripts": {
         "build": "rmdir -Recurse -Force out | tsc -p ./tsconfig.json",
         "pub": "tsc -p ./tsconfig.json | npm publish",
-        "test": "tsc -b tsconfig.testing.json | node out/test/index.js"
+        "test": "tsc -p ./tsconfig.testing.json | node out/test/index.js"
     },
     "files": [
         "out"

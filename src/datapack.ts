@@ -27,7 +27,7 @@ export default class DefaultDatapackBuilder extends util.PackBuilder {
         }
 
         await this.finalZip.add(fileData.path, new TextReader(JSON.stringify(finalJson, null, 2)));
-        this.fileMap[fileData.namespace][fileData.category][fileData.path] = [];
+        // this.fileMap[fileData.namespace][fileData.category][fileData.path] = [];
     }
 
     async getResolvedData(fileData: util.FileData, occurences: number[]) {
@@ -45,7 +45,7 @@ export default class DefaultDatapackBuilder extends util.PackBuilder {
         return resolvedData;
     }
 
-    async ifAnyDifferent(fileData: util.FileData, occurences: number[], success: (resolvedData: string[])=>void, failure: (resolvedData: string[])=>void) {
+    async ifAnyDifferent(fileData: util.FileData, occurences: number[], success: (resolvedData: string[])=>void, failure: (resolvedData: string[])=>void): Promise<boolean> {
         let resolvedData: string[] = await this.getResolvedData(fileData, occurences);
 
 
@@ -53,27 +53,29 @@ export default class DefaultDatapackBuilder extends util.PackBuilder {
         for(let d = 1; d < resolvedData.length; d++) {
             if(resolvedData[d] != first) {
                 await success(resolvedData);
-                return;
+                return true;
             }
         }
 
         failure(resolvedData);
+        return false;
     } 
 
-    override async handleConflict(fileData: util.FileData, occurences: number[]) {
+    override async handleConflict(fileData: util.FileData, occurences: number[]): Promise<boolean> {
         const onSuccess = async (resolvedData: string[]) => {
             if(fileData.category === 'tags') {
                 await this.mergeTags(fileData, resolvedData);
+                return true;
             } else {
                 await this.finalZip.add(fileData.path, new TextReader(resolvedData[0]));
+                return false;
             }
         }
 
         const onFailure = async (resolvedData: string[]) => {
             await this.finalZip.add(fileData.path, new TextReader(resolvedData[0]));
-            this.fileMap[fileData.namespace][fileData.category][fileData.path] = [];
         }
-        await this.ifAnyDifferent(fileData, occurences, onSuccess, onFailure)
+        return await this.ifAnyDifferent(fileData, occurences, onSuccess, onFailure)
     }
 }
 

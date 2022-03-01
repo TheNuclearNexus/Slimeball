@@ -19,7 +19,7 @@ export default class DefaultResourcepackBuilder extends util.PackBuilder {
             }
         }
         await this.finalZip.add(fileData.path, new TextReader(JSON.stringify(finalLang, null, 2)));
-        this.fileMap[fileData.namespace][fileData.category][fileData.path] = [];
+        // this.fileMap[fileData.namespace][fileData.category][fileData.path] = [];
     }
 
     async mergeModels(fileData: util.FileData, resolvedData: string[]) {
@@ -64,10 +64,10 @@ export default class DefaultResourcepackBuilder extends util.PackBuilder {
             await this.finalZip.add(fileData.path, new TextReader(JSON.stringify(finalModel, null, 2)));
         }
         
-        this.fileMap[fileData.namespace][fileData.category][fileData.path] = [];
+        // this.fileMap[fileData.namespace][fileData.category][fileData.path] = [];
     }
 
-    override async handleConflict(fileData: util.FileData, occurences: number[]) {
+    override async handleConflict(fileData: util.FileData, occurences: number[]): Promise<boolean> {
         let resolvedData: string[] = []
         for(let packIdx of occurences) {
             let packZip = this.packs[packIdx].zip;
@@ -82,12 +82,15 @@ export default class DefaultResourcepackBuilder extends util.PackBuilder {
 
         if(fileData.category === 'lang') {
             await this.mergeLangs(fileData, resolvedData);
+            return true;
         } else if (fileData.category === 'models') {
             await this.mergeModels(fileData, resolvedData)
+            return true;
         } else {
             const f = this.packs[occurences[0]].zip.file(fileData.path)
             if(f != null)
             await this.finalZip.add(fileData.path, new BlobReader(await f.async("blob")));
+            return false;
         }
     }
 }
