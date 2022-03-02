@@ -7,16 +7,18 @@
     "dependencies": {
         "@types/jszip": "^3.4.1",
         "@types/node": "^16.9.6",
+        "@types/paralleljs": "^0.0.21",
         "@zip.js/zip.js": "^2.4.4",
         "blob-polyfill": "^6.0.20211015",
         "jszip": "^3.7.1",
         "linq-es5": "^1.11.15",
+        "paralleljs": "^1.1.0",
         "web-worker": "^1.2.0"
     },
     "scripts": {
         "build": "rmdir -Recurse -Force out | tsc -p ./tsconfig.json",
         "pub": "tsc -p ./tsconfig.json | npm publish",
-        "test": "tsc -p ./tsconfig.testing.json | node out/test/index.js"
+        "test": "tsc -p ./tsconfig.testing.json && node out/test/index.js"
     },
     "files": [
         "out"

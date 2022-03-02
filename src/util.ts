@@ -118,7 +118,7 @@ export class PackBuilder {
     protected fileMap: FileMap = {}
     protected type: 'resourcepack' | 'datapack'
     protected packs: Pack[] = [];
-    protected onUpdate: (message: string) => void = (m) => console.log(m)
+    protected onUpdate: (message: string, spam?: boolean) => void = (m) => console.log(m)
     constructor(type: 'resourcepack' | 'datapack') {
         this.type = type;
 
@@ -170,17 +170,18 @@ export class PackBuilder {
             let fileOccurences = this.fileMap[filePath]
 
             if (fileOccurences.length == 1) {
+                this.onUpdate(`Handling conflict\n${filePath}`, true)
                 let packZip = this.packs[fileOccurences[0]].zip;
-                if (packZip != null) {
-                    const file = packZip.file(filePath)
-                    if (file != null)
-                        await this.finalZip.add(filePath, new BlobReader(await file.async('blob')))
-                    this.fileMap[filePath] = [];
+
+                const file = packZip.file(filePath)
+                if (file != null) {
+                    const blob = await file.async('blob');
+                    await this.finalZip.add(filePath, new BlobReader(blob), {'level': blob.size <= 800 ? 0 : 5})
                 }
+
             } else {
                 this.onUpdate(`Handling conflict\n${filePath}`)
                 const parts = getParts(filePath)
-                console.log(parts)
                 const resolved: boolean = await this.handleConflict({ namespace: parts[1], category: parts[2], path: filePath }, fileOccurences)
                 if (!resolved) {
                     conflicts.push({
