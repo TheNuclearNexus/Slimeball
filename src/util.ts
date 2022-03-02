@@ -176,7 +176,7 @@ export class PackBuilder {
                 const file = packZip.file(filePath)
                 if (file != null) {
                     const blob = await file.async('blob');
-                    await this.finalZip.add(filePath, new BlobReader(blob), {'level': blob.size <= 800 ? 0 : 5})
+                    await this.finalZip.add(filePath, new BlobReader(blob), {'level': blob.size <= 1000 ? 0 : 5})
                 }
 
             } else {
