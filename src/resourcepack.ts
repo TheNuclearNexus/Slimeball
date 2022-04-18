@@ -58,10 +58,16 @@ export default class DefaultResourcepackBuilder extends util.PackBuilder {
                     .ThenBy((model: any) => model["predicate"]["lefthanded"])
                     .ThenBy((model: any) => model["predicate"]["throwing"])
                     .ThenBy((model: any) => model["predicate"]["charged"])
+                    .ThenBy((model: any) => model["predicate"]["level"])
+                    .ThenBy((model: any) => model["predicate"]["filled"])
 
                 finalModel["overrides"] = o.ToArray();
             }
-            await this.finalZip.add(fileData.path, new TextReader(JSON.stringify(finalModel, null, 2)));
+            await this.finalZip.add(fileData.path, new TextReader(JSON.stringify(finalModel, (key, value) => {
+                if(typeof value === "number")
+                    if(value < 1e-6) return 1e-6
+                return value
+            }, 2)));
         }
         
         // this.fileMap[fileData.namespace][fileData.category][fileData.path] = [];
