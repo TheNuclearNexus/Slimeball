@@ -118,6 +118,7 @@ export class PackBuilder {
     protected fileMap: FileMap = {}
     protected type: 'resourcepack' | 'datapack'
     protected packs: Pack[] = [];
+    protected packFormat: number = 0;
     protected onUpdate: (message: string, spam?: boolean) => void = (m) => console.log(m)
     constructor(type: 'resourcepack' | 'datapack') {
         this.type = type;
@@ -133,12 +134,19 @@ export class PackBuilder {
         throw e
     };
 
-    private createFileMap() {
+    private async createFileMap() {
         this.onUpdate('Creating file map!')
         for (let idx = 0; idx < this.packs.length; idx++) {
             let d = this.packs[idx];
 
             let rootPath = this.type === 'datapack' ? "data" : "assets"
+
+            const packMetaFile = d.zip.file("pack.mcmeta")
+            if(packMetaFile == null) return
+            const packMetaData = JSON.parse(await packMetaFile.async("text"))
+
+            if(packMetaData.pack.pack_format > this.packFormat)
+                this.packFormat = packMetaData.pack.pack_format
 
             readDir(d.zip, rootPath, (path, entry) => {
                 let parts = getParts(path)
@@ -162,7 +170,7 @@ export class PackBuilder {
             throw e
         }
         this.onUpdate = onUpdate ? onUpdate : (message: string) => console.log(message);
-        this.createFileMap();
+        await this.createFileMap();
 
         let conflicts: { path: string, packs: number[] }[] = []
         this.onUpdate(`Checking for conflicts!`)
@@ -210,7 +218,7 @@ export class PackBuilder {
         this.onUpdate(`Adding pack.mcmeta`)
         await this.finalZip.add("pack.mcmeta", new TextReader(JSON.stringify({
             pack: {
-                pack_format: 8,
+                pack_format: this.packFormat,
                 description: `${this.type[0] + this.type.substring(1)} merged with §bmito.thenuclearnexus.live`
             }
         })))
