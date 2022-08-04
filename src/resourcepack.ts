@@ -8,13 +8,13 @@ export default class DefaultResourcepackBuilder extends util.PackBuilder {
     }
 
     async mergeLangs(fileData: util.FileData, resolvedData: string[]) {
-        let finalLang: {[key: string]: any} = {}
+        let finalLang: { [key: string]: any } = {}
 
-        for(let data of resolvedData) {
+        for (let data of resolvedData) {
             let json = util.parseData(data);
-            if(json == null) continue;
+            if (json == null) continue;
 
-            for(let k in json) {
+            for (let k in json) {
                 finalLang[k] = json[k];
             }
         }
@@ -25,62 +25,62 @@ export default class DefaultResourcepackBuilder extends util.PackBuilder {
     async mergeModels(fileData: util.FileData, resolvedData: string[]) {
         let finalModel = null;
 
-        for(let data of resolvedData) {
+        for (let data of resolvedData) {
             let json = util.parseData(data);
-            if(json == null) continue;
+            if (json == null) continue;
 
-            if(finalModel == null) {
+            if (finalModel == null) {
                 finalModel = json;
-                if(finalModel["overrides"] == null) finalModel["overrides"] = [];
+                if (finalModel["overrides"] == null) finalModel["overrides"] = [];
             }
 
-            if(json["overrides"] != null)
+            if (json["overrides"] != null)
                 finalModel["overrides"] = finalModel["overrides"].concat(json["overrides"])
         }
 
-        if(finalModel != null) { 
-            if(finalModel["overrides"] != null) {
+        if (finalModel != null) {
+            if (finalModel["overrides"] != null) {
                 let o = linq.AsEnumerable(finalModel["overrides"])
-                            
+
                 o = o
-                    .OrderBy((model: any) => model["predicate"]["custom_model_data"])
-                    .ThenBy((model: any) => model["predicate"]["damage"])
-                    .ThenBy((model: any) => model["predicate"]["damaged"])
-                    .ThenBy((model: any) => model["predicate"]["pull"])
-                    .ThenBy((model: any) => model["predicate"]["pulling"])
-                    .ThenBy((model: any) => model["predicate"]["time"])
-                    .ThenBy((model: any) => model["predicate"]["cooldown"])
-                    .ThenBy((model: any) => model["predicate"]["angle"])
-                    .ThenBy((model: any) => model["predicate"]["firework"])
-                    .ThenBy((model: any) => model["predicate"]["blocking"])
-                    .ThenBy((model: any) => model["predicate"]["broken"])
-                    .ThenBy((model: any) => model["predicate"]["cast"])
-                    .ThenBy((model: any) => model["predicate"]["lefthanded"])
-                    .ThenBy((model: any) => model["predicate"]["throwing"])
-                    .ThenBy((model: any) => model["predicate"]["charged"])
+                    .OrderBy((model: any) => model["predicate"]["custom_model_data"] ?? 0)
+                    .ThenBy((model: any) => model["predicate"]["damage"] ?? 0)
+                    .ThenBy((model: any) => model["predicate"]["damaged"] ?? 0)
+                    .ThenBy((model: any) => model["predicate"]["pull"] ?? 0)
+                    .ThenBy((model: any) => model["predicate"]["pulling"] ?? 0)
+                    .ThenBy((model: any) => model["predicate"]["time"] ?? 0)
+                    .ThenBy((model: any) => model["predicate"]["cooldown"] ?? 0)
+                    .ThenBy((model: any) => model["predicate"]["angle"] ?? 0)
+                    .ThenBy((model: any) => model["predicate"]["firework"] ?? 0)
+                    .ThenBy((model: any) => model["predicate"]["blocking"] ?? 0)
+                    .ThenBy((model: any) => model["predicate"]["broken"] ?? 0)
+                    .ThenBy((model: any) => model["predicate"]["cast"] ?? 0)
+                    .ThenBy((model: any) => model["predicate"]["lefthanded"] ?? 0)
+                    .ThenBy((model: any) => model["predicate"]["throwing"] ?? 0)
+                    .ThenBy((model: any) => model["predicate"]["charged"] ?? 0)
 
                 finalModel["overrides"] = o.ToArray();
             }
             await this.finalZip.add(fileData.path, new TextReader(JSON.stringify(finalModel, null, 2)));
         }
-        
+
         // this.fileMap[fileData.namespace][fileData.category][fileData.path] = [];
     }
 
     override async handleConflict(fileData: util.FileData, occurences: number[]): Promise<boolean> {
         let resolvedData: string[] = []
-        for(let packIdx of occurences) {
+        for (let packIdx of occurences) {
             let packZip = this.packs[packIdx].zip;
 
             const f = packZip.file(fileData.path)
 
-            if(f != null) {
+            if (f != null) {
                 let data = await f.async("string");
                 resolvedData.push(data)
             }
         }
 
-        if(fileData.category === 'lang') {
+        if (fileData.category === 'lang') {
             await this.mergeLangs(fileData, resolvedData);
             return true;
         } else if (fileData.category === 'models') {
@@ -88,8 +88,8 @@ export default class DefaultResourcepackBuilder extends util.PackBuilder {
             return true;
         } else {
             const f = this.packs[occurences[0]].zip.file(fileData.path)
-            if(f != null)
-            await this.finalZip.add(fileData.path, new BlobReader(await f.async("blob")));
+            if (f != null)
+                await this.finalZip.add(fileData.path, new BlobReader(await f.async("blob")));
             return false;
         }
     }

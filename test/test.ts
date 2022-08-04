@@ -1,4 +1,5 @@
 import DefaultDatapackBuilder from "../src/datapack.js";
+import DefaultResourcepackBuilder from "../src/resourcepack.js";
 import { BuildResult } from "../src/util.js";
 import * as fs from 'fs'
 import { BlobWriter, TextReader, ZipWriter } from "@zip.js/zip.js";
@@ -6,7 +7,7 @@ import { Console } from "console";
 
 
 async function handleInput(testName: string, files: [string, Buffer][]) {
-    let ddb = new DefaultDatapackBuilder();
+    let ddb = new DefaultResourcepackBuilder();
     const onUpdate = (message: string, spam?: boolean) => {
         if (spam) return;
         console.log(`Update: ` + message)
@@ -24,9 +25,9 @@ async function handleInput(testName: string, files: [string, Buffer][]) {
 
 export default async function test() {
     const files: [string, Buffer][] = [
-        ['dnd.zip', fs.readFileSync('C:/Users/Yavanni/Desktop/Test/DP/dnd.zip')],
-        ['manic.zip', fs.readFileSync('C:/Users/Yavanni/Desktop/Test/DP/manic.zip')],
-        ['tcc.zip', fs.readFileSync('C:/Users/Yavanni/Desktop/Test/DP/tcc.zip')],
+        ['dnd.zip', fs.readFileSync('C:/Users/Yavanni/Desktop/Test/RP/stardust.zip')],
+        ['manic.zip', fs.readFileSync('C:/Users/Yavanni/Desktop/Test/RP/flor.zip')],
+        // ['tcc.zip', fs.readFileSync('C:/Users/Yavanni/Desktop/Test/DP/tcc.zip')],
     ]
     // All
     let both = await handleInput('all', files)
@@ -38,7 +39,7 @@ export default async function test() {
     let manic = await handleInput('manic', [ files[1] ])
 
     // TCC
-    let tcc = await handleInput('tcc', [ files[2] ])
+    // let tcc = await handleInput('tcc', [ files[2] ])
 
 
 
@@ -63,9 +64,7 @@ DnD:
 Manic:
     Time: ${manic[0]}ms
     Size: ${manic[1]}kb vs ${getFileSize(1)}kb
-TCC:
-    Time: ${tcc[0]}ms
-    Size: ${tcc[1]}kb vs ${getFileSize(2)}kb
+
     `)
 }
 
