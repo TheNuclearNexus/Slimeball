@@ -15,7 +15,8 @@ async function handleInput(testName: string, files: [string, Buffer][]) {
     await ddb.loadBuffers(files)
     let start = Date.now()
     const result = await ddb.build(onUpdate)
-    const c: Blob = await result.zip.close()
+    console.log(result.zip.getEntries())
+    const c: Blob = await result.zip.export()
     const totalTime = Date.now() - start
     fs.writeFileSync(`out/${testName}.zip`, Buffer.from(await c.arrayBuffer()))
     return [totalTime, Math.ceil(c.size / 1000)]
@@ -25,8 +26,8 @@ async function handleInput(testName: string, files: [string, Buffer][]) {
 
 export default async function test() {
     const files: [string, Buffer][] = [
-        ['dnd.zip', fs.readFileSync('C:/Users/Yavanni/Desktop/Test/RP/stardust.zip')],
-        ['manic.zip', fs.readFileSync('C:/Users/Yavanni/Desktop/Test/RP/flor.zip')],
+        ['dnd.zip', fs.readFileSync('C:/Users/Yavanni/Desktop/Test/DP/dnd.zip')],
+        ['manic.zip', fs.readFileSync('C:/Users/Yavanni/Desktop/Test/DP/manic.zip')],
         // ['tcc.zip', fs.readFileSync('C:/Users/Yavanni/Desktop/Test/DP/tcc.zip')],
     ]
     // All

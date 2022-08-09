@@ -18,7 +18,7 @@ export default class DefaultResourcepackBuilder extends util.PackBuilder {
                 finalLang[k] = json[k];
             }
         }
-        await this.finalZip.add(fileData.path, new TextReader(JSON.stringify(finalLang, null, 2)));
+        await this.finalZip.addFile(fileData.path, Buffer.from(JSON.stringify(finalLang, null, 2)));
         // this.fileMap[fileData.namespace][fileData.category][fileData.path] = [];
     }
 
@@ -61,7 +61,7 @@ export default class DefaultResourcepackBuilder extends util.PackBuilder {
 
                 finalModel["overrides"] = o.ToArray();
             }
-            await this.finalZip.add(fileData.path, new TextReader(JSON.stringify(finalModel, (key, value) => {
+            await this.finalZip.addFile(fileData.path, Buffer.from(JSON.stringify(finalModel, (key, value) => {
                 if(typeof value === "number")
                     if(value < 1e-6) return 1e-6
                 return value
@@ -71,16 +71,14 @@ export default class DefaultResourcepackBuilder extends util.PackBuilder {
         // this.fileMap[fileData.namespace][fileData.category][fileData.path] = [];
     }
 
-    override async handleConflict(fileData: util.FileData, occurences: number[]): Promise<boolean> {
+    override async handleConflict(fileData: util.FileData, occurences: util.FileOccurence[]): Promise<boolean> {
         let resolvedData: string[] = []
-        for (let packIdx of occurences) {
-            let packZip = this.packs[packIdx].zip;
+        for (let occurence of occurences) {
 
-            const f = packZip.file(fileData.path)
+            const f = await occurence.entry.getData()
 
-            if (f != null) {
-                let data = await f.async("string");
-                resolvedData.push(data)
+            if (f !== undefined) {
+                resolvedData.push(f.toString('utf-8'))
             }
         }
 
@@ -91,9 +89,9 @@ export default class DefaultResourcepackBuilder extends util.PackBuilder {
             await this.mergeModels(fileData, resolvedData)
             return true;
         } else {
-            const f = this.packs[occurences[0]].zip.file(fileData.path)
-            if (f != null)
-                await this.finalZip.add(fileData.path, new BlobReader(await f.async("blob")));
+            const f = await occurences[0].entry.getData()
+            if (f !== undefined)
+                await this.finalZip.addFile(fileData.path, f);
             return false;
         }
     }

@@ -1,5 +1,6 @@
 import { TextReader } from '@zip.js/zip.js';
 import * as util from './util.js'
+import { FileOccurence } from './util.js';
 
 
 export default class DefaultDatapackBuilder extends util.PackBuilder {
@@ -26,32 +27,30 @@ export default class DefaultDatapackBuilder extends util.PackBuilder {
             }
         }
 
-        await this.finalZip.add(fileData.path, new TextReader(JSON.stringify(finalJson, null, 2)));
+        await this.finalZip.addFile(fileData.path, Buffer.from(JSON.stringify(finalJson, null, 2)));
         // this.fileMap[fileData.namespace][fileData.category][fileData.path] = [];
     }
 
-    async getResolvedData(fileData: util.FileData, occurences: number[]) {
+    async getResolvedData(fileData: util.FileData, occurences: FileOccurence[]) {
         let resolvedData: string[] = []
 
-        for(let packIdx of occurences) {
-            let packZip = this.packs[packIdx].zip;
-            const file = await packZip.file(fileData.path);
-            if(file != null) { 
-                let data = await file.async("string");
-                resolvedData.push(data)
+        for(let occurence of occurences) {
+            const file = await occurence.entry.getData()
+            if(file !== undefined) { 
+                resolvedData.push(file.toString('utf-8'));
             }
         }
 
         return resolvedData;
     }
 
-    async ifAnyDifferent(fileData: util.FileData, occurences: number[], success: (resolvedData: string[])=>void, failure: (resolvedData: string[])=>void): Promise<boolean> {
+    async ifAnyDifferent(fileData: util.FileData, occurences: FileOccurence[], success: (resolvedData: string[])=>void, failure: (resolvedData: string[])=>void): Promise<boolean> {
         let resolvedData: string[] = await this.getResolvedData(fileData, occurences);
 
 
         let first = resolvedData[0];
         for(let d = 1; d < resolvedData.length; d++) {
-            if(resolvedData[d] != first) {
+            if(resolvedData[d].localeCompare(first) == 0) {
                 await success(resolvedData);
                 return true;
             }
@@ -61,19 +60,19 @@ export default class DefaultDatapackBuilder extends util.PackBuilder {
         return false;
     } 
 
-    override async handleConflict(fileData: util.FileData, occurences: number[]): Promise<boolean> {
+    override async handleConflict(fileData: util.FileData, occurences: FileOccurence[]): Promise<boolean> {
         const onSuccess = async (resolvedData: string[]) => {
             if(fileData.category === 'tags') {
                 await this.mergeTags(fileData, resolvedData);
                 return true;
             } else {
-                await this.finalZip.add(fileData.path, new TextReader(resolvedData[0]));
+                await this.finalZip.addFile(fileData.path, Buffer.from(resolvedData[0]));
                 return false;
             }
         }
 
         const onFailure = async (resolvedData: string[]) => {
-            await this.finalZip.add(fileData.path, new TextReader(resolvedData[0]));
+            await this.finalZip.addFile(fileData.path, Buffer.from(resolvedData[0]));
         }
         return await this.ifAnyDifferent(fileData, occurences, onSuccess, onFailure)
     }

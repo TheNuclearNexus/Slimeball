@@ -4,6 +4,7 @@ import JSZip from 'jszip'
 import { EventEmitter } from 'events';
 
 import { BlobReader, BlobWriter, TextReader, ZipWriter } from '@zip.js/zip.js'
+import Zip, { Entry } from './zip.js';
 
 export async function validatePack(file: ArrayBuffer): Promise<JSZip | null> {
 
@@ -53,9 +54,9 @@ export class Namespace {
 
 export class Pack {
     name: string
-    zip: JSZip
+    zip: Zip
     files: string[] = []
-    constructor(name: string, zip: JSZip) {
+    constructor(name: string, zip: Zip) {
         this.name = name
         this.zip = zip
     }
@@ -89,7 +90,7 @@ export function getExtension(name: string): string {
 }
 
 export interface FileMap {
-    [key: string]: number[]
+    [key: string]: FileOccurence[]
 }
 
 export function parseData(data: string): any {
@@ -108,13 +109,18 @@ export interface FileData {
 
 export interface BuildResult {
     conflicts: number,
-    zip: ZipWriter
+    zip: Zip
+}
+
+export interface FileOccurence {
+    index: number,
+    entry: Entry
 }
 
 export const PackBuilderEvents = new EventEmitter();
 
 export class PackBuilder {
-    protected finalZip: ZipWriter
+    protected finalZip: Zip
     protected fileMap: FileMap = {}
     protected type: 'resourcepack' | 'datapack'
     protected packs: Pack[] = [];
@@ -124,11 +130,11 @@ export class PackBuilder {
         this.type = type;
 
         const blobWriter = new BlobWriter("application/zip");
-        this.finalZip = new ZipWriter(blobWriter)
+        this.finalZip = new Zip()
 
     }
 
-    async handleConflict(fileData: FileData, occurences: number[]): Promise<boolean> {
+    async handleConflict(fileData: FileData, occurences: FileOccurence[]): Promise<boolean> {
         const e = Error("Not Implemented, please extend this class")
         PackBuilderEvents.emit('caught-error', e)
         throw e
@@ -138,28 +144,29 @@ export class PackBuilder {
         this.onUpdate('Creating file map!')
         for (let idx = 0; idx < this.packs.length; idx++) {
             let d = this.packs[idx];
-
             let rootPath = this.type === 'datapack' ? "data" : "assets"
 
-            const packMetaFile = d.zip.file("pack.mcmeta")
-            if(packMetaFile == null) return
-            const packMetaData = JSON.parse(await packMetaFile.async("text"))
+            const packMetaFile = (await d.zip.getFile("pack.mcmeta"))
+            console.log(packMetaFile)
+            if(packMetaFile == undefined) continue
+            const packMetaData = JSON.parse((await packMetaFile.getData() ?? '').toString())
 
             if(packMetaData.pack.pack_format > this.packFormat)
                 this.packFormat = packMetaData.pack.pack_format
 
-            readDir(d.zip, rootPath, (path, entry) => {
-                let parts = getParts(path)
+            ;(await d.zip.getEntries()).forEach((entry) => {
+                let parts = getParts(entry.path)
                 if (parts.length >= 2) {
-                    const finalPath = rootPath + "/" + path;
+                    const finalPath = rootPath + "/" + entry.path;
                     if (parts[parts.length - 1].includes(".")) {
                         if (this.fileMap[finalPath] === undefined)
-                            this.fileMap[finalPath] = [idx]
+                            this.fileMap[finalPath] = [{index: idx, entry: entry}]
                         else
-                            this.fileMap[finalPath].push(idx)
+                            this.fileMap[finalPath].push({index: idx, entry: entry})
                     }
                 }
             })
+
         }
     }
 
@@ -172,19 +179,17 @@ export class PackBuilder {
         this.onUpdate = onUpdate ? onUpdate : (message: string) => console.log(message);
         await this.createFileMap();
 
-        let conflicts: { path: string, packs: number[] }[] = []
+        let conflicts: { path: string, packs: FileOccurence[] }[] = []
         this.onUpdate(`Checking for conflicts!`)
         for (let filePath in this.fileMap) {
             let fileOccurences = this.fileMap[filePath]
 
             if (fileOccurences.length == 1) {
                 this.onUpdate(`Handling conflict\n${filePath}`, true)
-                let packZip = this.packs[fileOccurences[0]].zip;
-
-                const file = packZip.file(filePath)
-                if (file != null) {
-                    const blob = await file.async('blob');
-                    await this.finalZip.add(filePath, new BlobReader(blob), {'level': blob.size <= 1000 ? 0 : 5})
+                const file = await fileOccurences[0].entry.getData()
+                if (file !== undefined) {
+                    const blob = file;
+                    await this.finalZip.addFile(filePath, file)
                 }
 
             } else {
@@ -208,15 +213,15 @@ export class PackBuilder {
             for (let c of conflicts) {
                 content += c.path + ':\n'
                 for (let p of c.packs) {
-                    content += ' - ' + this.packs[p].name + '\n';
+                    content += ' - ' + this.packs[p.index].name + '\n';
                 }
             }
 
-            await this.finalZip.add("conflicts.yaml", new TextReader(content))
+            await this.finalZip.addFile("conflicts.yaml", Buffer.from(content))
         }
 
         this.onUpdate(`Adding pack.mcmeta`)
-        await this.finalZip.add("pack.mcmeta", new TextReader(JSON.stringify({
+        await this.finalZip.addFile("pack.mcmeta", Buffer.from(JSON.stringify({
             pack: {
                 pack_format: this.packFormat,
                 description: `${this.type[0] + this.type.substring(1)} merged with §bmito.thenuclearnexus.live`
@@ -225,16 +230,18 @@ export class PackBuilder {
 
         if (this.packs.length === 1) {
             this.onUpdate(`Adding pack.png`)
-            const png = this.packs[0].zip.file("pack.png")
+            const png = await this.packs[0].zip.getFile("pack.png")
             if (png) {
-                await this.finalZip.add("pack.png", new BlobReader(await png.async("blob")))
+                const data = await png.getData()
+                if(data !== undefined)
+                    await this.finalZip.addFile("pack.png", data)
             }
         }
 
         return { zip: this.finalZip, conflicts: conflicts.length }
     }
 
-    private createPack(name: string, file: JSZip): Pack {
+    private createPack(name: string, file: Zip): Pack {
 
         let pack: Pack = new Pack(name.replaceAll('.zip', ''), file)
 
@@ -248,10 +255,10 @@ export class PackBuilder {
             const f = files.item(1)
             if (f != null) {
 
-                const zip = await validatePack(await f.arrayBuffer());
-                if (zip != null) {
-                    packs.push(this.createPack(f.name, zip));
-                }
+                const zip = new Zip()
+                await zip.load(Buffer.from(await f.arrayBuffer()))
+                packs.push(this.createPack(f.name, zip));
+                
             }
         }
 
@@ -262,10 +269,9 @@ export class PackBuilder {
         let packs: Pack[] = []
 
         for (let i = 0; i < files.length; i++) {
-            const zip = await validatePack(await files[i].arrayBuffer());
-            if (zip != null) {
-                packs.push(this.createPack(files[i].name, zip));
-            }
+            const zip = new Zip()
+            await zip.load(Buffer.from(await files[i].arrayBuffer()))
+            packs.push(this.createPack(files[i].name, zip));
         }
 
         this.packs = packs;
@@ -275,10 +281,9 @@ export class PackBuilder {
         let packs: Pack[] = []
 
         for (let i = 0; i < buffers.length; i++) {
-            const zip = await validatePack(buffers[i][1]);
-            if (zip != null) {
-                packs.push(this.createPack(buffers[i][0], zip));
-            }
+            const zip = new Zip()
+            await zip.load(Buffer.from(buffers[i][1]))
+            packs.push(this.createPack(buffers[i][0], zip));
         }
 
         this.packs = packs;

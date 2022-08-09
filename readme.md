@@ -20,7 +20,7 @@ async function handleInput(files: FileList) {
     let ddb = new DefaultDatapackBuilder();
     ddb.loadFileList(files).then(()=>{
         ddb.build().then((result: BuildResult) => {
-            result.zip.generateAsync({type:"blob"}).then((blob) => {
+            result.zip.export().then((blob) => {
                 saveAs(blob, 'datapack.zip');
             })
         });
