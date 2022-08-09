@@ -7,7 +7,7 @@ import { Console } from "console";
 
 
 async function handleInput(testName: string, files: [string, Buffer][]) {
-    let ddb = new DefaultResourcepackBuilder();
+    let ddb = new DefaultDatapackBuilder();
     const onUpdate = (message: string, spam?: boolean) => {
         if (spam) return;
         console.log(`Update: ` + message)

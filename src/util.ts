@@ -147,7 +147,6 @@ export class PackBuilder {
             let rootPath = this.type === 'datapack' ? "data" : "assets"
 
             const packMetaFile = (await d.zip.getFile("pack.mcmeta"))
-            console.log(packMetaFile)
             if(packMetaFile == undefined) continue
             const packMetaData = JSON.parse((await packMetaFile.getData() ?? '').toString())
 
@@ -157,7 +156,7 @@ export class PackBuilder {
             ;(await d.zip.getEntries()).forEach((entry) => {
                 let parts = getParts(entry.path)
                 if (parts.length >= 2) {
-                    const finalPath = rootPath + "/" + entry.path;
+                    const finalPath = entry.path;
                     if (parts[parts.length - 1].includes(".")) {
                         if (this.fileMap[finalPath] === undefined)
                             this.fileMap[finalPath] = [{index: idx, entry: entry}]
